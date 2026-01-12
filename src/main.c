@@ -1,5 +1,6 @@
 #include "prerequisites.h"
-#include "rendering.h"
+#include "std.h"
+#include "shell.h"
 
 static void hcf(void) {
     for (;;) {
@@ -19,9 +20,10 @@ void kmain(void) {
 
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
 
-    draw_text(framebuffer->address, 100, 100, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0x77ff77);
-    draw_text(framebuffer->address, 100, 110, "abcdefghijklmnopqrstuvwxyz", 0x77ff77);
-    draw_text(framebuffer->address, 100, 120, "!\"%&/()[]=+*#'-_.:,;<>", 0x77ff77);
-
-    hcf();
+    int result = start_shell(framebuffer->address);
+    switch (result) {
+        case 1: panic(framebuffer->address, " Shell crashed with exit code 1");
+        case 0: hcf();
+        default: panic(framebuffer->address, " Invalid return code ");
+    }
 }

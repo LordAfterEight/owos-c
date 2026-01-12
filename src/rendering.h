@@ -1,32 +1,16 @@
-#include "bitmap_font.h"
-#include "std.h"
+#ifndef RENDERING_H
+#define RENDERING_H
 
-static int SCREEN_WIDTH = 1280;
-static int SCREEN_HEIGHT = 720;
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-void blit_pixel(int fb_ptr[], int x, int y, int color) {
-    fb_ptr[y * SCREEN_WIDTH + x] = color;
-}
+extern const int SCREEN_WIDTH;
+extern const int SCREEN_HEIGHT;
 
-void draw_rect_f(int fb_ptr[], int x, int y, int w, int h, int color) {
-    for (int pixel_y = 0; pixel_y <= h; pixel_y++) {
-        for (int pixel_x = 0; pixel_x <= w; pixel_x++) {
-            blit_pixel(fb_ptr, x + pixel_x, y + pixel_y, color);
-        }
-    }
-}
+void blit_pixel(uint32_t* fb_ptr, int x, int y, uint32_t color);
+void draw_rect_f(uint32_t* fb_ptr, int x, int y, int w, int h, uint32_t color);
+void draw_text(uint32_t* fb_ptr, int x, int y, const char* text, uint32_t color, bool inverse);
+void draw_char(uint32_t* fb_ptr, int x, int y, const char character, uint32_t color, bool inverse);
 
-void draw_text(int fb_ptr[], int x, int y, const char text[], int color) {
-    int char_offset = 0;
-    for (size_t character = 0; character <= strlen(text); character++) {
-        const int* bitmap = get_bitmap(text[character]);
-        for (int char_y = 0; char_y <= 7; char_y++) {
-            for (int char_x = 7; char_x >= 0; char_x--) {
-                if ((bitmap[char_y] & (1 << (7 - char_x))) != 0) {
-                    blit_pixel(fb_ptr, x + ((char_x*-1) + char_offset), y + char_y, color);
-                }
-            }
-        }
-        char_offset += 8;
-    }
-}
+#endif
