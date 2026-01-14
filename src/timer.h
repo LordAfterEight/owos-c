@@ -1,5 +1,11 @@
+#ifndef TIMER_H
+#define TIMER_H
+
 #pragma once
 #include <stdint.h>
+#include "shell_definitions.h"
+
+struct Shell;
 
 #define PIT_CHANNEL0 0x40
 #define PIT_CMD      0x43
@@ -7,6 +13,7 @@
 
 extern volatile unsigned long ticks;
 
-void pit_init(uint32_t frequency);
-__attribute__((interrupt))
-void timer_callback(void* frame);
+void pit_init(struct Shell* shell, uint32_t frequency);
+void timer_callback(void *frame);
+
+#endif

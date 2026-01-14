@@ -15,5 +15,9 @@ void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 void *memset(void *se, int c, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
+char* utoa_limited(char* buf, size_t space, unsigned value, int base);
+char* utoa_internal(char* buf, unsigned int value, int base);
+char* utoa_upper_internal(char* buf, unsigned int value, int base);
+void format(char* buf, const char* fmt, ...);
 
 #endif

@@ -25,8 +25,8 @@ void draw_text(int x, int y, const char* text, uint32_t color, bool inverse) {
     int char_offset = 0;
     for (size_t i = 0; text[i] != '\0'; i++) {
         const uint8_t* bitmap = get_bitmap(text[i]);
-        for (int char_y = 0; char_y < 7; char_y++) {
-            for (int char_x = 0; char_x < 7; char_x++) {
+        for (int char_y = 0; char_y < 8; char_y++) {
+            for (int char_x = 0; char_x < 8; char_x++) {
                 bool pixel_on = (bitmap[char_y] & (1 << char_x)) != 0;
 
                 if (pixel_on != inverse) {
@@ -36,6 +36,30 @@ void draw_text(int x, int y, const char* text, uint32_t color, bool inverse) {
         }
         char_offset += 7;
     }
+}
+
+int draw_text_wrapping(int x, int y, const char* text, uint32_t color, bool inverse) {
+    int x_offset = 0;
+    int y_offset = 0;
+    for (size_t i = 0; text[i] != '\0'; i++) {
+        const uint8_t* bitmap = get_bitmap(text[i]);
+        for (int char_y = 0; char_y < 8; char_y++) {
+            for (int char_x = 0; char_x < 8; char_x++) {
+                bool pixel_on = (bitmap[char_y] & (1 << char_x)) != 0;
+
+                if (pixel_on != inverse) {
+                    blit_pixel(x + char_x + x_offset, y + char_y + y_offset, color);
+                }
+            }
+        }
+        if (x + x_offset >= SCREEN_WIDTH) {
+            x_offset = 0;
+            y_offset += 10;
+        } else {
+            x_offset += 7;
+        }
+    }
+    return y_offset;
 }
 
 void draw_char(int x, int y, const char character, uint32_t color, bool inverse) {

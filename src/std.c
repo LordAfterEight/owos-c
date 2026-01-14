@@ -1,5 +1,6 @@
 #include "rendering.h"
 #include "stdio.h"
+#include <stdarg.h>
 
 size_t strlen(const char* s) {
     const char *p = s;
@@ -14,7 +15,7 @@ void panic(const char message[]) {
             blit_pixel(x, y, 0x770000);
         }
     }
-    draw_text((SCREEN_WIDTH - strlen(" KERNEL PANIC ") * 8) / 2, SCREEN_HEIGHT / 3, " KERNEL_PANIC ", 0xFFFFFF, true);
+    draw_text((SCREEN_WIDTH - strlen(" KERNEL PANIC ") * 8) / 2, SCREEN_HEIGHT / 3, " KERNEL PANIC ", 0xFFFFFF, true);
     draw_text((SCREEN_WIDTH - strlen(message) * 8) / 2, SCREEN_HEIGHT / 3 + 10, message, 0xFFFFFF, false);
     while (1) {
         asm ("hlt");
@@ -47,28 +48,23 @@ void outw(uint16_t port, uint16_t val) {
 void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
     uint8_t *restrict pdest = (uint8_t *restrict)dest;
     const uint8_t *restrict psrc = (const uint8_t *restrict)src;
-
     for (size_t i = 0; i < n; i++) {
         pdest[i] = psrc[i];
     }
-
     return dest;
 }
 
 void *memset(void *s, int c, size_t n) {
     uint8_t *p = (uint8_t *)s;
-
     for (size_t i = 0; i < n; i++) {
         p[i] = (uint8_t)c;
     }
-
     return s;
 }
 
 void *memmove(void *dest, const void *src, size_t n) {
     uint8_t *pdest = (uint8_t *)dest;
     const uint8_t *psrc = (const uint8_t *)src;
-
     if (src > dest) {
         for (size_t i = 0; i < n; i++) {
             pdest[i] = psrc[i];
@@ -78,19 +74,117 @@ void *memmove(void *dest, const void *src, size_t n) {
             pdest[i-1] = psrc[i-1];
         }
     }
-
     return dest;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
     const uint8_t *p1 = (const uint8_t *)s1;
     const uint8_t *p2 = (const uint8_t *)s2;
-
     for (size_t i = 0; i < n; i++) {
         if (p1[i] != p2[i]) {
             return p1[i] < p2[i] ? -1 : 1;
         }
     }
-
     return 0;
+}
+
+char* utoa_limited(char* buf, size_t space, unsigned value, int base) {
+    if (space == 0) return buf;
+
+    char temp[11];
+    char* t = temp + sizeof(temp) - 1;
+    *t = '\0';
+    do {
+        unsigned digit = value % base;
+        value /= base;
+        if (t > temp) *--t = (digit < 10) ? (digit + '0') : (digit - 10 + 'a');
+    } while (value && t > temp);
+    while (*t && space > 1) {
+        *buf++ = *t++;
+        space--;
+    }
+    return buf;
+}
+
+char* utoa_internal(char* buf, unsigned int value, int base) {
+    char temp[11];
+    char* t = temp + 10;
+    *t = '\0';
+    do {
+        unsigned int digit = value % base;
+        value /= base;
+        *--t = (digit < 10) ? (digit + '0') : (digit - 10 + 'a');
+    } while (value);
+    while (*t)
+        *buf++ = *t++;
+    return buf;
+}
+
+char* utoa_upper_internal(char* buf, unsigned int value, int base) {
+    char temp[11];
+    char* t = temp + 10;
+    *t = '\0';
+    do {
+        unsigned int digit = value % base;
+        value /= base;
+        *--t = (digit < 10) ? (digit + '0') : (digit - 10 + 'A');
+    } while (value);
+    while (*t)
+        *buf++ = *t++;
+    return buf;
+}
+
+void format(char* buf, const char* fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    char* p = buf;
+    int width = 0;
+    while (*fmt)
+    {
+        if (*fmt == '%')
+        {
+            fmt++;
+            width = 0;
+            // Very basic width support (only digits)
+            while (*fmt >= '0' && *fmt <= '9')
+                width = width * 10 + (*fmt++ - '0');
+            switch (*fmt++)
+            {
+                case 'c':   *p++ = (char)va_arg(va, int); break;
+                case 's':   
+                {
+                    const char* s = va_arg(va, const char*);
+                    while (*s) *p++ = *s++;
+                    break;
+                }
+                case 'd':
+                case 'i':
+                {
+                    int val = va_arg(va, int);
+                    if (val < 0) { *p++ = '-'; val = -val; }
+                    p = utoa_internal(p, val, 10);
+                    break;
+                }
+                case 'u':   p = utoa_internal(p, va_arg(va, unsigned), 10); break;
+                case 'x':   p = utoa_internal(p, va_arg(va, unsigned), 16); break;
+                case 'X':   p = utoa_upper_internal(p, va_arg(va, unsigned), 16); break;
+                case 'p':
+                    *p++ = '0';
+                    *p++ = 'x';
+                    p = utoa_internal(p, (uintptr_t)va_arg(va, void*), 16);
+                    break;
+                case '%':   *p++ = '%'; break;
+                default:
+                    *p++ = '%';
+                    p[-1] = fmt[-1];  // put back unknown specifier
+                    break;
+            }
+        }
+        else
+        {
+            *p++ = *fmt++;
+        }
+    }
+    *p = '\0';
+    va_end(va);
 }

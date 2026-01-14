@@ -44,21 +44,22 @@ void kmain(void) {
     };
 
     pic_remap();
-    shell_print(&shell, "Kernel: ", 0xAAAAAA, false);
-    shell_println(&shell, "Setting up interrupt descrtiptor table entry for timer", 0xFFFFFF, false);
-    set_idt_entry(32, timer_callback);
 
-    shell_print(&shell, "Kernel: ", 0xAAAAAA, false);
-    shell_println(&shell, "Initializing interrupt descrtiptor table", 0xFFFFFF, false);
+    for (int i = 0; i < 256; i++) {
+        set_idt_entry(&shell, i, default_handler, 0, 0x8E);
+    }
+
+    set_idt_entry(&shell, 32, timer_callback, 0, 0x8E);
+    set_idt_entry(&shell, 14, page_fault_handler, 1, 0x8F);
+
     idt_init();
 
-    shell_print(&shell, "Kernel: ", 0xAAAAAA, false);
-    shell_println(&shell, "Initializing programmable interval timer with 100Hz", 0xFFFFFF, false);
-    pit_init(100);
+    outb(PIC1_DATA, 0xFF);
+    outb(PIC2_DATA, 0xFF);
 
-    shell_print(&shell, "Kernel: ", 0xAAAAAA, false);
-    shell_println(&shell, "Enabling interrupts", 0xFFFFFF, false);
-    asm volatile("sti");
+    outb(PIC1_DATA, inb(PIC1_DATA) & ~(1 << 0));
+
+    pit_init(&shell, 100);
 
     shell_println(&shell, "", 0x000000, false);
 
@@ -67,8 +68,6 @@ void kmain(void) {
     shell_print(&shell, "Build date: ", 0xDDDDDD, false);
     shell_println(&shell, __DATE__, 0x6666FF, false);
     shell_println(&shell, "", 0xFFFFFF, false);
-
-    //draw_rect_f(100, 100, 100, 100, 0xFFFFFF);
 
     int result = start_shell(shell);
     switch (result) {
