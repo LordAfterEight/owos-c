@@ -2,11 +2,12 @@
 #include "std.h"
 #include "shell_definitions.h"
 #include "idt.h"
+#include "fonts/OwOSFont_8x16.h"
 
-__attribute__((aligned(32)))
+__attribute__((packed))
 struct IDTEntry idt[256] __attribute__((aligned(16)));
 
-__attribute__((aligned(32)))
+__attribute__((packed))
 struct IDTPointer idt_ptr __attribute__((aligned(16)));
 
 void set_idt_entry(struct Shell* shell, int vector, void *handler, uint8_t ist, uint8_t type_attr) {
@@ -20,11 +21,6 @@ void set_idt_entry(struct Shell* shell, int vector, void *handler, uint8_t ist, 
     idt[vector].ist         = ist;
     idt[vector].type_attr   = type_attr;
     idt[vector].zero        = 0;
-
-    char buf[80];
-    format(buf, "Set up entry for Interrupt Descriptor Table at vector 0x%x", vector);
-    shell_print(shell, "Kernel=>IDT:", 0xFFFFFF, false);
-    shell_println(shell, buf, 0xAAAAAA, false);
 }
 
 void idt_init(void) {
@@ -34,12 +30,28 @@ void idt_init(void) {
     asm volatile("lidt %0" : : "m"(idt_ptr) : "memory");
 }
 
-__attribute__((interrupt))
-void default_handler(struct InterruptFrame *frame) {
-    panic(" Unhandled interrupt ");
+__attribute__((naked, used, section(".text.doublefault")))
+void default_handler(void) {
+    panic("Unhandleable Interrupt ocurred");
+    asm volatile(
+        "cli\n\t"
+        "push $0\n\t"
+        "push %0\n\t"
+        "1: hlt\n\t"
+        "jmp 1b"
+        : : "i"(0xFF)
+    );
 }
 
-__attribute__((interrupt))
-void page_fault_handler(struct InterruptFrame *frame, uintptr_t error_code) {
-    panic(" Page fault ");
+__attribute__((naked, used, section(".text.doublefault")))
+void page_fault_handler(void) {
+    panic("Page Fault ocurred");
+    asm volatile(
+        "cli\n\t"
+        "push $0\n\t"
+        "push %0\n\t"
+        "1: hlt\n\t"
+        "jmp 1b"
+        : : "i"(0xFF)
+    );
 }

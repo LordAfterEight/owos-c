@@ -33,8 +33,8 @@ void set_idt_entry(struct Shell* shell, int vector, void* handler, uint8_t ist, 
 void idt_init(void);
 extern void timer_handler_asm();
 
-__attribute__((interrupt))
-void default_handler(struct InterruptFrame *frame);
+__attribute__((naked, used, section(".text.doublefault")))
+void default_handler(void);
 
-__attribute__((interrupt))
-void page_fault_handler(struct InterruptFrame *frame, uintptr_t error_code);
+__attribute__((naked, used, section(".text.doublefault")))
+void page_fault_handler(void);

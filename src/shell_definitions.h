@@ -4,6 +4,7 @@
 #include "rendering.h"
 #include "drivers/ps2.h"
 #include "timer.h"
+#include "fonts/font.h"
 
 struct InputBuffer {
     char buffer[256];
@@ -24,8 +25,8 @@ struct Shell {
 
 void push_char(struct InputBuffer* buffer, const char character);
 void move_cursor(struct Cursor* cursor, int8_t value);
-void shell_print(struct Shell* shell, char* text, uint32_t color, bool invert);
-void shell_println(struct Shell* shell, char* text, uint32_t color, bool invert);
+void shell_print(struct Shell* shell, char* text, uint32_t color, bool invert, const struct Font* font);
+void shell_println(struct Shell* shell, char* text, uint32_t color, bool invert, const struct Font* font);
 void handle_input(struct Shell* shell, char* input);
 void update_buffer(struct Shell* shell);
 void update_cursor(struct Cursor* cursor);
