@@ -18,11 +18,12 @@ void panic(const char message[]) {
             blit_pixel(x, y, 0x770000);
         }
     }
-    draw_text((SCREEN_WIDTH - strlen(" KERNEL PANIC ") * 8) / 2, SCREEN_HEIGHT / 3, " KERNEL PANIC ", 0xFFFFFF, true, &OwOSFont_8x16);
-    draw_text((SCREEN_WIDTH - strlen(message) * 8) / 2, SCREEN_HEIGHT / 3 + 16, message, 0xFFFFFF, false, &OwOSFont_8x16);
     char buf[32];
+    draw_text((SCREEN_WIDTH - strlen(" KERNEL PANIC ") * 8) / 2, SCREEN_HEIGHT / 3, " KERNEL PANIC ", 0xFFFFFF, true, &OwOSFont_8x16);
+    format(buf, "Reason: %s", message);
+    draw_text((SCREEN_WIDTH - strlen(buf) * 8) / 2, SCREEN_HEIGHT / 3 + 16, buf, 0xFFFFFF, false, &OwOSFont_8x16);
     for (int i = 10; i > 0; i--) {
-        format(buf, "Going back to Shell in: %ds", i);
+        format(buf, "Trying to recover in: %ds", i);
         draw_text((SCREEN_WIDTH - strlen(buf) * 8) / 2, SCREEN_HEIGHT / 3 + 64, buf, 0xFFFFFF, false, &OwOSFont_8x16);
         msleep(1000);
         draw_text((SCREEN_WIDTH - strlen(buf) * 8) / 2, SCREEN_HEIGHT / 3 + 64, buf, 0x770000, false, &OwOSFont_8x16);

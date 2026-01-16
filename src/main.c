@@ -60,20 +60,20 @@ void kmain(void) {
     char buf[64];
     format(buf, "Pushing default handler address (0x%x) to interrupt descriptor table", default_handler);
     shell_println(&shell, buf, 0xFFFFFF, false, &OwOSFont_8x16);
-    draw_text(700, 1, "IDT Vectors:", 0xAAFFAA, false, &OwOSFont_8x16);
+    draw_text(640, 1, "IDT Vectors:", 0xAAFFAA, false, &OwOSFont_8x16);
     for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 8; x++) {
-            set_idt_entry(&shell, x+8*y, default_handler, 0, 0x8E);
+            set_idt_entry(x+8*y, default_handler, 0, 0x8E);
         }
     }
-    set_idt_entry(&shell, 32, timer_callback, 0, 0x8E);
-    set_idt_entry(&shell, 13, page_fault_handler, 1, 0x8E);
-    set_idt_entry(&shell, 14, page_fault_handler, 1, 0x8E);
+    set_idt_entry(32, timer_callback, 0, 0x8E);
+    set_idt_entry(8, double_fault_handler, 1, 0x8E);
+    set_idt_entry(14, page_fault_handler, 1, 0x8E);
     for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 8; x++) {
             char buf[16];
             format(buf, "vector %d: 0x%x", x+8*y, idt[x+8*y]);
-            draw_text(700 + x*150, 20 + y*16, buf, 0xFFAAAA, false, &OwOSFont_8x16);
+            draw_text(640 + x*160, 20 + y*16, buf, 0xFFAAAA, false, &OwOSFont_8x16);
         }
     }
     idt_init();

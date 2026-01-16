@@ -10,7 +10,7 @@ struct IDTEntry idt[256] __attribute__((aligned(16)));
 __attribute__((packed))
 struct IDTPointer idt_ptr __attribute__((aligned(16)));
 
-void set_idt_entry(struct Shell* shell, int vector, void *handler, uint8_t ist, uint8_t type_attr) {
+void set_idt_entry(int vector, void *handler, uint8_t ist, uint8_t type_attr) {
     uint64_t addr = (uint64_t)handler;
 
     idt[vector].offset_low  = addr & 0xFFFF;
@@ -30,28 +30,50 @@ void idt_init(void) {
     asm volatile("lidt %0" : : "m"(idt_ptr) : "memory");
 }
 
-__attribute__((naked, used, section(".text.doublefault")))
-void default_handler(void) {
-    panic("Unhandleable Interrupt ocurred");
-    asm volatile(
-        "cli\n\t"
-        "push $0\n\t"
-        "push %0\n\t"
-        "1: hlt\n\t"
-        "jmp 1b"
-        : : "i"(0xFF)
+__attribute__((interrupt))
+void default_handler(uint64_t* frame) {
+    panic("Unhandleable Interrupt");
+    asm volatile (
+        "cli                        \n\t"
+        "mov    %%rsp, %%rdi        \n\t"
+        "call   panic_handler_c     \n\t"
+        "1: hlt                     \n\t"
+        "jmp    1b                  \n\t"
+        ::: "memory", "rdi"
     );
 }
 
-__attribute__((naked, used, section(".text.doublefault")))
-void page_fault_handler(void) {
-    panic("Page Fault ocurred");
-    asm volatile(
-        "cli\n\t"
-        "push $0\n\t"
-        "push %0\n\t"
-        "1: hlt\n\t"
-        "jmp 1b"
-        : : "i"(0xFF)
+__attribute__((interrupt))
+void page_fault_handler(uint64_t* frame) {
+    panic("Page Fault");
+    asm volatile (
+        "cli                        \n\t"
+        "mov    %%rsp, %%rdi        \n\t"
+        "call   panic_handler_c     \n\t"
+        "1: hlt                     \n\t"
+        "jmp    1b                  \n\t"
+        ::: "memory", "rdi"
     );
+}
+
+__attribute__((interrupt))
+void double_fault_handler(uint64_t* frame) {
+    panic("Double Fault");
+    asm volatile (
+        "cli                        \n\t"
+        "mov    %%rsp, %%rdi        \n\t"
+        "call   panic_handler_c     \n\t"
+        "1: hlt                     \n\t"
+        "jmp    1b                  \n\t"
+        ::: "memory", "rdi"
+    );
+}
+
+__attribute__((noreturn))
+void panic_handler_c(uint64_t* frame) {
+    uint64_t rip = frame[0];
+    char buf[64];
+    format(buf, "Faulting RIP: 0x%x", rip);
+    draw_text(1, 1, buf, 0xFFFFFF, false, &OwOSFont_8x16);
+    while(1) asm volatile("hlt");
 }
