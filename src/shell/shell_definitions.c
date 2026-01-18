@@ -70,6 +70,7 @@ int handle_input(char* input) {
         shell_println(" - irpt disable: Disables interrupts", 0xFFFF77, false, &OwOSFont_8x16);
         shell_println(" - idt reinit: Reinitializes the Interrupt Descriptor Table", 0xFFFF77, false, &OwOSFont_8x16);
         shell_println(" - idt check: Checks if all IDT entries are valid", 0x77FF77, false, &OwOSFont_8x16);
+        shell_println(" - idt poison: Poisons the IDT with wrong entries", 0x77FF77, false, &OwOSFont_8x16);
         shell_println(" - page fault: Tests page fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
         shell_println(" - double fault: Tests double fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
     }
@@ -90,9 +91,13 @@ int handle_input(char* input) {
     }
     else if (strcmp(input, "irpt enable")) {
         asm volatile ("sti");
+        shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
+        shell_println("enabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
     else if (strcmp(input, "irpt disable")) {
         asm volatile ("cli");
+        shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
+        shell_println("Disabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
     else if (strcmp(input, "page fault")) {
         set_idt_entry(14, page_fault_handler, 0, 0x8E);
@@ -114,6 +119,9 @@ int handle_input(char* input) {
             }
         }
     }
+    else if (strcmp(input, "idt poison")) {
+        set_idt_entry(8, (void*)0xDEADBEEF, 1, 0x8E);
+    }
     else if (strcmp(input, "idt check")) {
         shell_print("[Kernel:IDT] -> ", 0xFFFFFF, false, &OwOSFont_8x16);
         if (check_idt_entry(32, timer_callback, 0, 0x8E)) {
@@ -130,7 +138,7 @@ int handle_input(char* input) {
     }
     else {
         if (!(strcmp(input, "\0"))) {
-            beep(950, 50);
+            //beep(950, 50);
             char buf[64];
             format(buf, "Invalid command: %s", input);
             shell_println(buf, 0xFF7777, false, &OwOSFont_8x16);
@@ -144,7 +152,7 @@ int update_buffer() {
     int result = 0;
     if (c) {
         if (c == '\n' || c == '\r') {
-            beep(1000, 25);
+            //beep(1000, 25);
             draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
             push_char(&shell.buffer, '\0');
             result = handle_input(shell.buffer.buffer[shell.buffer.nth_command]);

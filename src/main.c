@@ -55,33 +55,6 @@ void kmain(void) {
         }
     }
 
-    shell_print("[Kernel:IDT] <- ", 0xAAAAAA, false, &OwOSFont_8x16);
-    shell_println("Timer Callback", 0xFFFFFF, false, &OwOSFont_8x16);
-    set_idt_entry(32, timer_callback, 0, 0x8E);
-
-    shell_print("[Kernel:IDT] <- ", 0xAAAAAA, false, &OwOSFont_8x16);
-    shell_println("Double Fault Handler", 0xFFFFFF, false, &OwOSFont_8x16);
-    set_idt_entry(8, double_fault_handler, 1, 0x8E);
-
-    shell_print("[Kernel:IDT] <- ", 0xAAAAAA, false, &OwOSFont_8x16);
-    shell_println("Page Fault Handler", 0xFFFFFF, false, &OwOSFont_8x16);
-    set_idt_entry(14, page_fault_handler, 1, 0x8E);
-
-    shell_print("[Kernel:IDT] -> ", 0xAAAAAA, false, &OwOSFont_8x16);
-    shell_println("Checking Entries...", 0xFFFF77, false, &OwOSFont_8x16);
-
-    shell_print("[Kernel:IDT] -> ", 0xAAAAAA, false, &OwOSFont_8x16);
-    if (check_idt_entry(32, timer_callback, 0, 0x8E)) {
-        shell_println("Timer Callback [OK]", 0x22FF22, false, &OwOSFont_8x16);
-    } else shell_println("Timer Callback [ERR]", 0xFF2222, false, &OwOSFont_8x16);
-    shell_print("[Kernel:IDT] -> ", 0xAAAAAA, false, &OwOSFont_8x16);
-    if (check_idt_entry(8, double_fault_handler, 1, 0x8E)) {
-        shell_println("DF Handler [OK]", 0x22FF22, false, &OwOSFont_8x16);
-    } else shell_println("DF Handler [ERR]", 0xFF2222, false, &OwOSFont_8x16);
-    shell_print("[Kernel:IDT] -> ", 0xAAAAAA, false, &OwOSFont_8x16);
-    if (check_idt_entry(14, page_fault_handler, 1, 0x8E)) {
-        shell_println("PF Handler [OK]", 0x22FF22, false, &OwOSFont_8x16);
-    } else shell_println("PF Handler [ERR]", 0xFF2222, false, &OwOSFont_8x16);
 
     idt_init();
 
@@ -98,7 +71,7 @@ void kmain(void) {
 
     greet();
 
-    beep(1000, 50);
+    //beep(1000, 50);
 
     int result = shell_process.run(shell);
     switch (result) {
