@@ -1,14 +1,16 @@
-#include "rendering.h"
-#include "drivers/ps2.h"
-#include "timer.h"
-#include "idt.h"
+#include "../rendering.h"
+#include "../drivers/ps2.h"
+#include "../timer.h"
+#include "../idt.h"
 #include "shell_definitions.h"
-#include "fonts/OwOSFont_8x16.h"
-#include "sound/pcspeaker.h"
-#include "time.h"
-#include "std/mem.h"
-#include "std/string.h"
-#include "ramfs/ramfs.h"
+#include "../fonts/OwOSFont_8x16.h"
+#include "../sound/pcspeaker.h"
+#include "../time.h"
+#include "../std/mem.h"
+#include "../std/string.h"
+#include "../ramfs/ramfs.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 volatile struct CommandBuffer command_buffer = {0};
 volatile struct Cursor cursor = {0};
@@ -28,7 +30,7 @@ void shell_init(void) {
 }
 
 void push_char(struct CommandBuffer* buffer, const char character) {
-    buffer->buffer[buffer->nth_command][buffer->buffer_pos] = character;
+    buffer->buffer[buffer->token][buffer->buffer_pos] = character;
     buffer->buffer_pos++;
 }
 
@@ -57,14 +59,15 @@ void clear_screen() {
     draw_text(5, SCREEN_HEIGHT - 18, buf, 0xAAAAAA, false, &OwOSFont_8x16);
 }
 
-int handle_input(char* input) {
+int handle_input(struct CommandBuffer* buffer) {
     shell.cursor.pos_y += 16;
     shell.cursor.pos_x = 1;
-    if (strcmp(input, "help")) {
+    if (strcmp(buffer->buffer[0], "help")) {
         shell_println("General:", 0x77FF77, false, &OwOSFont_8x16);
         shell_println(" - help: Prints this message", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println(" - clear: Clears the screen", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println(" - info: Shows kernel info", 0xAAAAAA, false, &OwOSFont_8x16);
+        shell_println(" - vfs test: creates a file and prints its data", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println(" - reboot: Reboots the PC", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println("", 0x000000, false, &OwOSFont_8x16);
         shell_println("Debugging/Testing:", 0x77FF77, false, &OwOSFont_8x16);
@@ -77,48 +80,108 @@ int handle_input(char* input) {
         shell_println(" - page fault: Tests page fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
         shell_println(" - double fault: Tests double fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
     }
-    else if (strcmp(input, "panic")) {
+    else if (strcmp(buffer->buffer[0], "panic")) {
         panic(" Induced panic ");
-        clear_screen();
     }
-    else if (strcmp(input, "reboot")) {
+    else if (strcmp(buffer->buffer[0], "reboot")) {
         shell_println("Shutting down...", 0xAAAAAA, false, &OwOSFont_8x16);
         msleep(2000);
         return 2;
     }
-    else if (strcmp(input, "clear")) {
+    else if (strcmp(buffer->buffer[0], "clear")) {
         clear_screen(shell);
     }
-    else if (strcmp(input, "info")) {
+    else if (strcmp(buffer->buffer[0], "info")) {
         greet();
     }
-    else if (strcmp(input, "irpt enable")) {
+    else if (strcmp(buffer->buffer[0], "ls")) {
+        char buf[128];
+        for (int i = 0; i < MAX_FOLDERS; i++) {
+            if (root_dir.folders[i] == NULL) break;
+            format(buf, "%s", root_dir.folders[i]->name);
+            shell_println(buf, 0x7777FF, false, &OwOSFont_8x16);
+        }
+        for (int i = 0; i < MAX_FILES; i++) {
+            if (root_dir.files[i] == NULL) break;
+            format(buf, "%s", root_dir.files[i]->name);
+            shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
+        }
+    }
+    else if (strcmp(buffer->buffer[0], "tree")) {
+        for (int file = 0; file < MAX_FILES; file++) {
+            if (root_dir.files[file] == NULL) break;
+            char buf[128];
+            format(buf, "%s", root_dir.files[file]->name);
+            shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
+        }
+        for (int folder = 0; folder < MAX_FOLDERS; folder++) {
+            if (root_dir.folders[folder] == NULL) break;
+            for (int file = 0; file < MAX_FILES; file++) {
+                if (root_dir.folders[folder]->files[file] == NULL) break;
+                char buf[128];
+                format(buf, "%s/", root_dir.folders[folder]->name);
+                shell_print(buf, 0x7777FF, false, &OwOSFont_8x16);
+                format(buf, "%s", root_dir.folders[folder]->files[file]->name);
+                shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
+            }
+        }
+    }
+    else if (strcmp(buffer->buffer[0], "file new")) {
+        struct File* f = new_file("Test File.txt");
+        asm volatile ("hlt");
+        if (!f) {
+            panic("File pointer is NULL");
+        }
+        if (f) {
+            root_dir.files[root_dir.file_pointer++] = f;
+        }
+    }
+    else if (strcmp(buffer->buffer[0], "file new in folder")) {
+        struct File* f = new_file("Test File.txt");
+        if (!f) {
+            panic("File pointer is NULL");
+        }
+        if (f) {
+            root_dir.folders[root_dir.folder_pointer - 1]->files[root_dir.folders[root_dir.folder_pointer - 1]->file_pointer++] = f;
+        }
+    }
+    else if (strcmp(buffer->buffer[0], "folder new")) {
+        struct Folder* f = new_folder("Test Folder");
+        asm volatile ("hlt");
+        if (!f) {
+            panic("Folder pointer is NULL");
+        }
+        if (f) {
+            root_dir.folders[root_dir.folder_pointer++] = f;
+        }
+    }
+    else if (strcmp(buffer->buffer[0], "irpt enable")) {
         asm volatile ("sti");
         shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println("enabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
-    else if (strcmp(input, "irpt disable")) {
+    else if (strcmp(buffer->buffer[0], "irpt disable")) {
         asm volatile ("cli");
         shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println("Disabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
-    else if (strcmp(input, "page fault")) {
+    else if (strcmp(buffer->buffer[0], "page fault")) {
         set_idt_entry(14, page_fault_handler, 0, 0x8E);
         set_idt_entry(8, double_fault_handler, 1, 0x8E);
         *(volatile int*)0x123456789ABCDEF0 = 42;
     }
-    else if (strcmp(input, "double fault")) {
+    else if (strcmp(buffer->buffer[0], "double fault")) {
         set_idt_entry(14, page_fault_handler, 1, 0x8E);
         set_idt_entry(8, double_fault_handler, 0, 0x8E);
         *(volatile int*)0x123456789ABCDEF0 = 42;
     }
-    else if (strcmp(input, "idt reinit")) {
+    else if (strcmp(buffer->buffer[0], "idt reinit")) {
         idt_init();
     }
-    else if (strcmp(input, "idt poison")) {
+    else if (strcmp(buffer->buffer[0], "idt poison")) {
         set_idt_entry(8, (void*)0xCAFE, 1, 0x8E);
     }
-    else if (strcmp(input, "idt check")) {
+    else if (strcmp(buffer->buffer[0], "idt check")) {
         shell_print("[Kernel:IDT] -> ", 0xFFFFFF, false, &OwOSFont_8x16);
         if (check_idt_entry(32, timer_callback, 0, 0x8E)) {
             shell_println("Timer Callback [OK]", 0x22FF22, false, &OwOSFont_8x16);
@@ -141,10 +204,10 @@ int handle_input(char* input) {
         }
     }
     else {
-        if (!(strcmp(input, "\0"))) {
+        if (!(strcmp(buffer->buffer[0], "\0"))) {
             //beep(950, 50);
             char buf[64];
-            format(buf, "Invalid command: %s", input);
+            format(buf, "Invalid command: %s", buffer->buffer[0]);
             shell_println(buf, 0xFF7777, false, &OwOSFont_8x16);
         }
     }
@@ -155,13 +218,21 @@ int update_buffer() {
     char c = getchar_polling();
     int result = 0;
     if (c) {
-        if (c == '\n' || c == '\r') {
+        if (c == ' ') {
+            shell.buffer.token++;
+            draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
+            push_char(&shell.buffer, c);
+            draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.token][shell.buffer.buffer_pos - 1], 0xFFFFFF, false, &OwOSFont_8x16);
+            move_cursor(&shell.cursor, 8);
+        }
+        else if (c == '\n' || c == '\r') {
             //beep(1000, 25);
             draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
             push_char(&shell.buffer, '\0');
-            result = handle_input(shell.buffer.buffer[shell.buffer.nth_command]);
+            result = handle_input(&shell.buffer);
             memset(shell.buffer.buffer, 0, sizeof shell.buffer.buffer);
             shell.buffer.buffer_pos = 0;
+            shell.buffer.token = 0;
             shell.cursor.pos_x = 1;
             shell_print("Command: ", 0xAAAAAA, false, &OwOSFont_8x16);
         } else if (c == '\b') {
@@ -169,13 +240,13 @@ int update_buffer() {
                 shell.buffer.buffer_pos -= 1;
                 draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
                 shell.cursor.pos_x -= 8;
-                draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.nth_command][shell.buffer.buffer_pos], 0x000000, false, &OwOSFont_8x16);
-                shell.buffer.buffer[shell.buffer.nth_command][shell.buffer.buffer_pos] = 0;
+                draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.token][shell.buffer.buffer_pos], 0x000000, false, &OwOSFont_8x16);
+                shell.buffer.buffer[shell.buffer.token][shell.buffer.buffer_pos] = 0;
             }
         } else {
             draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
             push_char(&shell.buffer, c);
-            draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.nth_command][shell.buffer.buffer_pos - 1], 0xFFFFFF, false, &OwOSFont_8x16);
+            draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.token][shell.buffer.buffer_pos - 1], 0xFFFFFF, false, &OwOSFont_8x16);
             move_cursor(&shell.cursor, 8);
         }
     }

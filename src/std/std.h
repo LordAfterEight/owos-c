@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static char* KERNEL_VERSION = "0.2.7";
+static char* KERNEL_VERSION = "0.2.8";
 static char* KERNEL_NAME = "OwOS-C";
 static char* OS_MODEL = "Volatile";
 

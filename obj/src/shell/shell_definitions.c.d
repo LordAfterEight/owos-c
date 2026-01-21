@@ -1,22 +1,31 @@
 obj/src/shell/shell_definitions.c.o: src/shell/shell_definitions.c \
- src/rendering.h src/fonts/font.h src/drivers/ps2.h src/std/std.h \
- src/timer.h src/shell/shell_definitions.h src/fonts/font.h \
- src/process/process.h src/idt.h src/shell/shell_definitions.h \
- src/fonts/OwOSFont_8x16.h src/sound/pcspeaker.h src/time.h src/std/mem.h \
- src/std/string.h src/ramfs/ramfs.h
-src/rendering.h:
-src/fonts/font.h:
-src/drivers/ps2.h:
-src/std/std.h:
-src/timer.h:
+ src/shell/../rendering.h src/shell/../fonts/font.h \
+ src/shell/../drivers/ps2.h src/shell/../drivers/../std/std.h \
+ src/shell/../timer.h src/shell/../shell/shell_definitions.h \
+ src/shell/../shell/../rendering.h src/shell/../shell/../drivers/ps2.h \
+ src/shell/../shell/../drivers/../std/std.h \
+ src/shell/../shell/../fonts/font.h \
+ src/shell/../shell/../process/process.h src/shell/../idt.h \
+ src/shell/shell_definitions.h src/shell/../fonts/OwOSFont_8x16.h \
+ src/shell/../sound/pcspeaker.h src/shell/../time.h \
+ src/shell/../std/mem.h src/shell/../std/string.h \
+ src/shell/../ramfs/ramfs.h
+src/shell/../rendering.h:
+src/shell/../fonts/font.h:
+src/shell/../drivers/ps2.h:
+src/shell/../drivers/../std/std.h:
+src/shell/../timer.h:
+src/shell/../shell/shell_definitions.h:
+src/shell/../shell/../rendering.h:
+src/shell/../shell/../drivers/ps2.h:
+src/shell/../shell/../drivers/../std/std.h:
+src/shell/../shell/../fonts/font.h:
+src/shell/../shell/../process/process.h:
+src/shell/../idt.h:
 src/shell/shell_definitions.h:
-src/fonts/font.h:
-src/process/process.h:
-src/idt.h:
-src/shell/shell_definitions.h:
-src/fonts/OwOSFont_8x16.h:
-src/sound/pcspeaker.h:
-src/time.h:
-src/std/mem.h:
-src/std/string.h:
-src/ramfs/ramfs.h:
+src/shell/../fonts/OwOSFont_8x16.h:
+src/shell/../sound/pcspeaker.h:
+src/shell/../time.h:
+src/shell/../std/mem.h:
+src/shell/../std/string.h:
+src/shell/../ramfs/ramfs.h:

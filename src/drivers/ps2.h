@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "std/std.h"
+#include "../std/std.h"
 
 #define PS2_DATA_PORT    0x60
 #define PS2_STATUS_PORT  0x64

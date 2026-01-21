@@ -8,7 +8,7 @@
 #include "pic.h"
 #include "sound/pcspeaker.h"
 #include "process/process.h"
-
+#include "ramfs/ramfs.h"
 #include "fonts/OwOSFont_8x16.h"
 
 static void hcf(void) {
@@ -45,8 +45,6 @@ void kmain(void) {
     pic_remap();
     shell_init();
 
-    char buf[64];
-
     shell_print("[Kernel:IDT] <- ", 0xAAAAAA, false, &OwOSFont_8x16);
     shell_println("Default Handler", 0xFFFFFF, false, &OwOSFont_8x16);
     for (int y = 0; y < 32; y++) {
@@ -66,6 +64,10 @@ void kmain(void) {
     pit_init(&shell, 1000);
 
     asm volatile ("sti");
+    shell_print("[Kernel:IDT] -> ", 0xAAAAAA, false, &OwOSFont_8x16);
+    shell_println("Enabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
+
+    root_init(&root_dir);
 
     shell_println("", 0x000000, false, &OwOSFont_8x16);
 
