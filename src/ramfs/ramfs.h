@@ -12,14 +12,14 @@
 
 
 struct File {
-    const char* name;
+    char name[MAX_NAME_LENGTH];
     uint8_t length;
     uint32_t data_pointer;
     uint8_t* data;
 };
 
 struct Folder {
-    char* name;
+    char name[MAX_NAME_LENGTH];
     uint8_t file_pointer;
     uint8_t folder_pointer;
     struct File* files[MAX_FILES];
@@ -27,8 +27,9 @@ struct Folder {
 };
 
 void root_init(struct Folder* root_dir);
-struct File* new_file(char* name);
-struct Folder* new_folder(char* name);
+struct File* new_file(char name[]);
+struct Folder* new_folder(char name[]);
+int move_folder(char* folder_name, char* dest_name);
 
 extern volatile struct Folder root_dir;
 static struct File file_pool[MAX_FILES];

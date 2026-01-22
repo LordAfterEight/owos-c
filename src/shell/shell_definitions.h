@@ -31,11 +31,11 @@ extern volatile struct Shell shell;
 extern volatile struct Process shell_process;
 
 void shell_init();
-void push_char(struct CommandBuffer* buffer, const char character);
-void move_cursor(struct Cursor* cursor, uint8_t value);
+void push_char(volatile struct CommandBuffer* buffer, const char character);
+void move_cursor(volatile struct Cursor* cursor, uint8_t value);
 void shell_print(char* text, uint32_t color, bool invert, const struct Font* font);
 void shell_println(char* text, uint32_t color, bool invert, const struct Font* font);
-int handle_input(struct CommandBuffer* buffer);
+int handle_input(volatile struct CommandBuffer* buffer);
 int update_buffer();
 void update_cursor();
 int update_shell();

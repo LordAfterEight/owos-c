@@ -29,12 +29,12 @@ void shell_init(void) {
     shell_println("Initialized", 0x77FF77, false, &OwOSFont_8x16);
 }
 
-void push_char(struct CommandBuffer* buffer, const char character) {
+void push_char(volatile struct CommandBuffer* buffer, const char character) {
     buffer->buffer[buffer->token][buffer->buffer_pos] = character;
     buffer->buffer_pos++;
 }
 
-void move_cursor(struct Cursor* cursor, uint8_t value) {
+void move_cursor(volatile struct Cursor* cursor, uint8_t value) {
     cursor->pos_x += value;
 }
 
@@ -59,7 +59,7 @@ void clear_screen() {
     draw_text(5, SCREEN_HEIGHT - 18, buf, 0xAAAAAA, false, &OwOSFont_8x16);
 }
 
-int handle_input(struct CommandBuffer* buffer) {
+int handle_input(volatile struct CommandBuffer* buffer) {
     shell.cursor.pos_y += 16;
     shell.cursor.pos_x = 1;
     if (strcmp(buffer->buffer[0], "help")) {
@@ -80,63 +80,109 @@ int handle_input(struct CommandBuffer* buffer) {
         shell_println(" - page fault: Tests page fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
         shell_println(" - double fault: Tests double fault handling, nonrecoverable", 0xFFFF77, false, &OwOSFont_8x16);
     }
-    else if (strcmp(buffer->buffer[0], "panic")) {
+    else if (strcmp((char*)buffer->buffer[0], "panic")) {
         panic(" Induced panic ");
     }
-    else if (strcmp(buffer->buffer[0], "reboot")) {
+    else if (strcmp((char*)buffer->buffer[0], "reboot")) {
         shell_println("Shutting down...", 0xAAAAAA, false, &OwOSFont_8x16);
         msleep(2000);
         return 2;
     }
-    else if (strcmp(buffer->buffer[0], "clear")) {
+    else if (strcmp((char*)buffer->buffer[0], "clear")) {
         clear_screen(shell);
     }
-    else if (strcmp(buffer->buffer[0], "info")) {
+    else if (strcmp((char*)buffer->buffer[0], "info")) {
         greet();
     }
-    else if (strcmp(buffer->buffer[0], "ls")) {
-        char buf[128];
-        for (int i = 0; i < MAX_FOLDERS; i++) {
-            if (root_dir.folders[i] == NULL) break;
-            format(buf, "%s", root_dir.folders[i]->name);
+    else if (strcmp((char*)buffer->buffer[0], "ls")) {
+        for (int i = 0; i < root_dir.folder_pointer; i++) {
+            if (root_dir.folders[i] == NULL) continue;
+            char buf[128];
+            format(buf, "F %d %s", i, root_dir.folders[i]->name);
             shell_println(buf, 0x7777FF, false, &OwOSFont_8x16);
         }
-        for (int i = 0; i < MAX_FILES; i++) {
-            if (root_dir.files[i] == NULL) break;
-            format(buf, "%s", root_dir.files[i]->name);
+        for (int i = 0; i < root_dir.file_pointer; i++) {
+            if (root_dir.files[i] == NULL) continue;
+            char buf[128];
+            format(buf, "f %2d: %s", i, root_dir.files[i]->name);
             shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
         }
     }
-    else if (strcmp(buffer->buffer[0], "tree")) {
-        for (int file = 0; file < MAX_FILES; file++) {
-            if (root_dir.files[file] == NULL) break;
-            char buf[128];
-            format(buf, "%s", root_dir.files[file]->name);
-            shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
-        }
-        for (int folder = 0; folder < MAX_FOLDERS; folder++) {
-            if (root_dir.folders[folder] == NULL) break;
-            for (int file = 0; file < MAX_FILES; file++) {
-                if (root_dir.folders[folder]->files[file] == NULL) break;
-                char buf[128];
-                format(buf, "%s/", root_dir.folders[folder]->name);
+    else if (strcmp((char*)buffer->buffer[0], "tree")) {
+        char buf[96];
+        for (int folder = 0; folder < root_dir.folder_pointer; folder++) {
+            struct Folder* dir = root_dir.folders[folder];
+            if (dir == NULL) continue;
+
+            for (int folder_in = 0; folder_in < dir->folder_pointer; folder_in++) {
+                struct Folder* f = dir->folders[folder_in];
+                if (f == NULL) continue;
+                format(buf, "F %d %s: ", folder, dir->name);
                 shell_print(buf, 0x7777FF, false, &OwOSFont_8x16);
-                format(buf, "%s", root_dir.folders[folder]->files[file]->name);
-                shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
+                shell_println(f->name, 0xFFFFFF, false, &OwOSFont_8x16);
+            }
+            for (int file = 0; file < dir->file_pointer; file++) {
+                struct File* f = dir->files[file];
+                if (f == NULL) continue;
+                format(buf, "%s/", dir->name);
+                shell_print(buf, 0x7777FF, false, &OwOSFont_8x16);
+                shell_println(f->name, 0xFFFFFF, false, &OwOSFont_8x16);
             }
         }
     }
-    else if (strcmp(buffer->buffer[0], "file new")) {
-        struct File* f = new_file("Test File.txt");
-        asm volatile ("hlt");
-        if (!f) {
-            panic("File pointer is NULL");
+    else if (strcmp((char*)buffer->buffer[0], "file")) {
+        if (strcmp((char*)buffer->buffer[1], "new")) {
+            if (strcmp((char*)buffer->buffer[2], "\0")) {
+                shell_println("Please specify a name", 0xFF7777, false, &OwOSFont_8x16);
+            } else {
+                struct File* f = new_file(buffer->buffer[2]);
+                if (!f) {
+                    panic("File pointer is NULL");
+                }
+                if (f) {
+                    root_dir.files[root_dir.file_pointer] = f;
+                    char buf[64];
+                    format(buf, "Created file with name \"%s\"", root_dir.files[root_dir.file_pointer]->name);
+                    shell_println(buf, 0xAAAAAA, false, &OwOSFont_8x16);
+                    root_dir.file_pointer++;
+                }
+            }
         }
-        if (f) {
-            root_dir.files[root_dir.file_pointer++] = f;
+        else if (strcmp((char*)buffer->buffer[1], "delete")) {
+        }
+        else {
+            shell_println("Please specify an action", 0xFF7777, false, &OwOSFont_8x16);
         }
     }
-    else if (strcmp(buffer->buffer[0], "file new in folder")) {
+    else if (strcmp((char*)buffer->buffer[0], "folder")) {
+        if (strcmp((char*)buffer->buffer[1], "new")) {
+            if (strcmp((char*)buffer->buffer[2], "\0")) {
+                shell_println("Please specify a name", 0xFF7777, false, &OwOSFont_8x16);
+            } else {
+                struct Folder* f = new_folder(buffer->buffer[2]);
+                if (!f) {
+                    panic("Folder pointer is NULL");
+                }
+                if (f) {
+                    root_dir.folders[root_dir.folder_pointer] = f;
+                    char buf[64];
+                    format(buf, "Created folder with name \"%s\"", root_dir.folders[root_dir.folder_pointer]->name);
+                    shell_println(buf, 0xAAAAAA, false, &OwOSFont_8x16);
+                    root_dir.folder_pointer++;
+                }
+            }
+        }
+        else if (strcmp((char*)buffer->buffer[1], "move")) {
+            move_folder((char*)buffer->buffer[3], (char*)buffer->buffer[2]);
+        }
+        else if (strcmp((char*)buffer->buffer[1], "delete")) {
+            shell_println("Not yet implemented", 0xFF7777, false, &OwOSFont_8x16);
+        }
+        else {
+            shell_println("Please specify an action", 0xFF7777, false, &OwOSFont_8x16);
+        }
+    }
+    else if (strcmp((char*)buffer->buffer[0], "file new in folder")) {
         struct File* f = new_file("Test File.txt");
         if (!f) {
             panic("File pointer is NULL");
@@ -145,43 +191,33 @@ int handle_input(struct CommandBuffer* buffer) {
             root_dir.folders[root_dir.folder_pointer - 1]->files[root_dir.folders[root_dir.folder_pointer - 1]->file_pointer++] = f;
         }
     }
-    else if (strcmp(buffer->buffer[0], "folder new")) {
-        struct Folder* f = new_folder("Test Folder");
-        asm volatile ("hlt");
-        if (!f) {
-            panic("Folder pointer is NULL");
-        }
-        if (f) {
-            root_dir.folders[root_dir.folder_pointer++] = f;
-        }
-    }
-    else if (strcmp(buffer->buffer[0], "irpt enable")) {
+    else if (strcmp((char*)buffer->buffer[0], "irpt enable")) {
         asm volatile ("sti");
         shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println("enabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
-    else if (strcmp(buffer->buffer[0], "irpt disable")) {
+    else if (strcmp((char*)buffer->buffer[0], "irpt disable")) {
         asm volatile ("cli");
         shell_print("Kernel:IDT -> ", 0xAAAAAA, false, &OwOSFont_8x16);
         shell_println("Disabled interrupts", 0xFFFFFF, false, &OwOSFont_8x16);
     }
-    else if (strcmp(buffer->buffer[0], "page fault")) {
+    else if (strcmp((char*)buffer->buffer[0], "page fault")) {
         set_idt_entry(14, page_fault_handler, 0, 0x8E);
         set_idt_entry(8, double_fault_handler, 1, 0x8E);
         *(volatile int*)0x123456789ABCDEF0 = 42;
     }
-    else if (strcmp(buffer->buffer[0], "double fault")) {
+    else if (strcmp((char*)buffer->buffer[0], "double fault")) {
         set_idt_entry(14, page_fault_handler, 1, 0x8E);
         set_idt_entry(8, double_fault_handler, 0, 0x8E);
         *(volatile int*)0x123456789ABCDEF0 = 42;
     }
-    else if (strcmp(buffer->buffer[0], "idt reinit")) {
+    else if (strcmp((char*)buffer->buffer[0], "idt reinit")) {
         idt_init();
     }
-    else if (strcmp(buffer->buffer[0], "idt poison")) {
+    else if (strcmp((char*)buffer->buffer[0], "idt poison")) {
         set_idt_entry(8, (void*)0xCAFE, 1, 0x8E);
     }
-    else if (strcmp(buffer->buffer[0], "idt check")) {
+    else if (strcmp((char*)buffer->buffer[0], "idt check")) {
         shell_print("[Kernel:IDT] -> ", 0xFFFFFF, false, &OwOSFont_8x16);
         if (check_idt_entry(32, timer_callback, 0, 0x8E)) {
             shell_println("Timer Callback [OK]", 0x22FF22, false, &OwOSFont_8x16);
@@ -204,7 +240,7 @@ int handle_input(struct CommandBuffer* buffer) {
         }
     }
     else {
-        if (!(strcmp(buffer->buffer[0], "\0"))) {
+        if (!(strcmp((char*)buffer->buffer[0], "\0"))) {
             //beep(950, 50);
             char buf[64];
             format(buf, "Invalid command: %s", buffer->buffer[0]);
@@ -219,10 +255,10 @@ int update_buffer() {
     int result = 0;
     if (c) {
         if (c == ' ') {
+            push_char(&shell.buffer, '\0');
             shell.buffer.token++;
+            shell.buffer.buffer_pos = 0;
             draw_char(shell.cursor.pos_x, shell.cursor.pos_y + 16, '^', 0x000000, false, &OwOSFont_8x16);
-            push_char(&shell.buffer, c);
-            draw_char(shell.cursor.pos_x, shell.cursor.pos_y, shell.buffer.buffer[shell.buffer.token][shell.buffer.buffer_pos - 1], 0xFFFFFF, false, &OwOSFont_8x16);
             move_cursor(&shell.cursor, 8);
         }
         else if (c == '\n' || c == '\r') {
