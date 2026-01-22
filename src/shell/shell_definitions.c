@@ -98,14 +98,14 @@ int handle_input(volatile struct CommandBuffer* buffer) {
         for (int i = 0; i < root_dir.folder_pointer; i++) {
             if (root_dir.folders[i] == NULL) continue;
             char buf[128];
-            format(buf, "F %d %s", i, root_dir.folders[i]->name);
+            format(buf, "D %d %s", i, root_dir.folders[i]->name);
             shell_println(buf, 0x7777FF, false, &OwOSFont_8x16);
         }
         for (int i = 0; i < root_dir.file_pointer; i++) {
             if (root_dir.files[i] == NULL) continue;
             char buf[128];
-            format(buf, "f %2d: %s", i, root_dir.files[i]->name);
-            shell_println(buf, 0xFFFFFF, false, &OwOSFont_8x16);
+            format(buf, "F %2d: %s", i, root_dir.files[i]->name);
+            shell_println(buf, 0xFFFFAA, false, &OwOSFont_8x16);
         }
     }
     else if (strcmp((char*)buffer->buffer[0], "tree")) {
@@ -117,7 +117,7 @@ int handle_input(volatile struct CommandBuffer* buffer) {
             for (int folder_in = 0; folder_in < dir->folder_pointer; folder_in++) {
                 struct Folder* f = dir->folders[folder_in];
                 if (f == NULL) continue;
-                format(buf, "F %d %s: ", folder, dir->name);
+                format(buf, "D %d %s: ", folder, dir->name);
                 shell_print(buf, 0x7777FF, false, &OwOSFont_8x16);
                 shell_println(f->name, 0xFFFFFF, false, &OwOSFont_8x16);
             }
