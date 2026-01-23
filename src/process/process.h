@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-const struct Process {
+struct Process {
     char* name;
     uint8_t id;
     int (*run)();

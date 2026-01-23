@@ -6,6 +6,7 @@
 #include "../timer.h"
 #include "../fonts/font.h"
 #include "../process/process.h"
+#include "../ramfs/ramfs.h"
 
 struct CommandBuffer {
     char buffer[16][256];
@@ -42,5 +43,6 @@ int update_shell();
 void clear_screen();
 int start_shell();
 void greet();
+void print_dirtree(volatile struct Folder* current_dir, char* foldername);
 
 #endif

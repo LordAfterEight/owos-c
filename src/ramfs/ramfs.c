@@ -28,7 +28,7 @@ struct File* new_file(char name[]) {
     f->name[MAX_NAME_LENGTH - 1] = '\0';
 
     f->length = 0;
-    f->data = file_data_pool[file_pool_used - 1];  // note: -1 because we already ++
+    f->data = file_data_pool[file_pool_used - 1];
 
     memset(f->data, 0, MAX_FILE_DATA);
 
@@ -84,8 +84,8 @@ int move_folder(char* folder_name, char* dest_name) {
     }
 
     if (src_idx < root_dir.folder_pointer - 1) {
-        memmove(&root_dir.folders[src_idx],
-                &root_dir.folders[src_idx + 1],
+        memmove((void*)&root_dir.folders[src_idx],
+                (void*)&root_dir.folders[src_idx + 1],
                 (root_dir.folder_pointer - src_idx - 1) * sizeof(struct Folder*));
     }
     root_dir.folder_pointer--;
